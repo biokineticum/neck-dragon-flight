@@ -63,6 +63,13 @@ Ensure Windows grants permission to desktop apps to access your camera:
 
 ## 4. Run Instructions
 
+The valley includes a lake fed by a river and waterfall, clustered forests,
+rocky highlands, a fly-through rock tunnel, an old watchtower and an ancient
+gate. Clouds, trees, water and distant birds move over time. Weather cycles
+between clear and rainy conditions; synthesized wind, water and bird ambience
+adds sound. Wind responds to speed and altitude. Water and landmarks are
+visual, so they do not obstruct peaceful flight.
+
 ### Option A: One-Click Launcher (Recommended)
 Double-click `run_game.bat` located in the root directory. The launcher script will:
 1. Verify Python availability.

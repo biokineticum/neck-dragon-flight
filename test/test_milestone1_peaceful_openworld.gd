@@ -66,7 +66,118 @@ func run_m1_verification_battery() -> bool:
 	
 	# Check 7: R4 Controls & UDP Head Tracking Compatibility
 	success = await test_r4_controls_and_tracking() and success
+
+	success = await test_landscape_details() and success
+	success = await test_weather_cycle() and success
 	
+	return success
+
+func test_landscape_details() -> bool:
+	print("\n--- [CHECK 8: Terrain details and regeneration] ---")
+	var terrain = preload("res://scripts/ProceduralMeshGen.gd")
+	var cm = ChunkManager.new()
+	root.add_child(cm)
+	await process_frame
+	await physics_frame
+	var details = cm.get_node_or_null("WorldDetails")
+	var success = details != null
+	if details == null:
+		cm.queue_free()
+		return false
+	success = success and details.get_node_or_null("ValleyLake") != null
+	success = success and details.get_node_or_null("Watchtower") != null
+	success = success and details.get_node_or_null("AncientGate") != null
+	success = success and details.get_node_or_null("RockTunnel") != null
+	success = success and details.get_node_or_null("LowerRiver") != null
+	success = success and details.get_node_or_null("UpperRiver") != null
+	success = success and details.get_node_or_null("Waterfall") != null
+	success = success and details.get_node_or_null("LakeAmbience") != null
+	success = success and details.get_node_or_null("FallsAmbience") != null
+	success = success and details.get_node_or_null("ForestAmbience") != null
+	var rocks = details.get_node_or_null("Boulders") as MultiMeshInstance3D
+	success = success and rocks != null and rocks.multimesh.visible_instance_count > 100
+	var forest = cm.forest_multimesh_instance.multimesh
+	success = success and forest.visible_instance_count >= 2000
+	for i in range(forest.visible_instance_count):
+		var point = forest.get_instance_transform(i).origin
+		if Vector2(point.x, point.z).distance_to(terrain.LAKE_CENTER) < terrain.LAKE_RADIUS + 35.0:
+			success = false
+			break
+		if point.x > terrain.RIVER_START and point.x < terrain.RIVER_END and absf(point.z - terrain.river_center_z(point.x)) < terrain.RIVER_HALF_WIDTH + 20.0:
+			success = false
+			break
+	var water_clear_samples = 0
+	for i in range(32):
+		var angle = TAU * float(i) / 32.0
+		var point = terrain.LAKE_CENTER + Vector2(cos(angle), sin(angle)) * (terrain.LAKE_RADIUS * 0.85)
+		var surface = terrain.sample_landscape_surface(point.x, point.y, cm.world_size, cm.world_resolution, cm.master_seed)
+		if surface < terrain.LAKE_LEVEL:
+			water_clear_samples += 1
+	success = success and water_clear_samples >= 28
+	for seed_value in [42, 43, 123]:
+		for x in [460.0, 550.0, 650.0, 700.0, 820.0, 900.0, 1000.0]:
+			for offset in [-0.7, 0.0, 0.7]:
+				var z = terrain.river_center_z(x) + terrain.river_half_width(x) * offset
+				var bed = terrain.sample_landscape_surface(x, z, cm.world_size, cm.world_resolution, seed_value)
+				if bed >= terrain.river_level(x):
+					printerr("  FAIL: River bed above water at x=%.1f, seed=%d (bed=%.2f)" % [x, seed_value, bed])
+					success = false
+	var tunnel = details.get_node("RockTunnel")
+	for z_offset in [-24.0, 0.0, 24.0]:
+		var floor_height = terrain.sample_landscape_surface(tunnel.position.x, tunnel.position.z + z_offset, cm.world_size, cm.world_resolution, cm.master_seed)
+		if floor_height > tunnel.position.y + 10.0:
+			printerr("  FAIL: Terrain blocks the tunnel at z offset %.1f" % z_offset)
+			success = false
+	var cloud_mesh = terrain.generate_puffy_cloud_mesh()
+	var cloud_arrays = cloud_mesh.surface_get_arrays(0)
+	var cloud_vertices: PackedVector3Array = cloud_arrays[Mesh.ARRAY_VERTEX]
+	var cloud_normals: PackedVector3Array = cloud_arrays[Mesh.ARRAY_NORMAL]
+	if cloud_vertices[5].dot(cloud_normals[5]) <= 0.0:
+		printerr("  FAIL: Cloud surface normals face inward")
+		success = false
+	var space = cm.get_world_3d().direct_space_state
+	for point in [Vector2(381.0, -320.0), Vector2(513.0, 408.0), Vector2(-462.0, -478.0)]:
+		var hit = space.intersect_ray(PhysicsRayQueryParameters3D.create(Vector3(point.x, 1000.0, point.y), Vector3(point.x, -100.0, point.y), 1))
+		if hit.is_empty():
+			success = false
+			continue
+		var sampled = terrain.sample_landscape_surface(point.x, point.y, cm.world_size, cm.world_resolution, cm.master_seed)
+		if absf(sampled - hit.position.y) > 0.1:
+			success = false
+	var cloud = cm.clouds_container.get_child(0)
+	var old_position = cloud.position
+	cm._process(1.0)
+	success = success and cloud.position != old_position
+	cm.setup_corridor(null, 43)
+	await process_frame
+	var detail_count = 0
+	for child in cm.get_children():
+		if child.name == "WorldDetails":
+			detail_count += 1
+	success = success and detail_count == 1
+	print("  Terrain details: %s (lake samples %d/32, trees %d)" % ["PASS" if success else "FAIL", water_clear_samples, forest.visible_instance_count])
+	cm.queue_free()
+	return success
+
+func test_weather_cycle() -> bool:
+	print("\n--- [CHECK 9: Weather transitions] ---")
+	var main = load("res://scenes/Main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	var weather = main.get_node("WeatherDirector")
+	var env = main.get_node("WorldEnvironment").environment
+	var sun = main.get_node("DirectionalLight3D")
+	weather._apply_weather(0.0)
+	var clear_density: float = env.fog_density
+	var clear_light: float = sun.light_energy
+	var success: bool = not weather.rain.emitting
+	weather._apply_weather(1.0)
+	success = success and weather.rain.emitting and env.fog_density > clear_density and sun.light_energy < clear_light
+	weather._apply_weather(0.0)
+	success = success and not weather.rain.emitting and absf(env.fog_density - clear_density) < 0.000001
+	print("  Weather transitions: %s" % ("PASS" if success else "FAIL"))
+	main.queue_free()
+	await process_frame
 	return success
 
 ## -----------------------------------------------------------------------------

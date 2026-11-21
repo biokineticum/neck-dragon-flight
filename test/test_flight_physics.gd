@@ -30,7 +30,7 @@ func _init() -> void:
 	if passed:
 		print("==================================================================")
 		print("   ALL FLIGHT PHYSICS TESTS PASSED (Exit code 0)")
-		print("   Tests: 10 passed, 0 failed")
+		print("   Tests: 11 passed, 0 failed")
 		print("==================================================================")
 		quit(0)
 	else:
@@ -128,9 +128,42 @@ func run_flight_physics_suite() -> bool:
 	print("Test 10 Result: %s" % ("PASS" if t10 else "FAIL"))
 	success = t10 and success
 
+	print("\n--- Test 11: Smooth Attitude and Camera Response ---")
+	var t11 = test_smooth_response()
+	print("Test 11 Result: %s" % ("PASS" if t11 else "FAIL"))
+	success = t11 and success
+
 	# Clean up
 	dragon.queue_free()
 	await process_frame
+	return success
+
+func test_smooth_response() -> bool:
+	var controller = FlightController.new()
+	var max_step = deg_to_rad(controller.max_attitude_rate_deg) / 60.0
+	var pitch = controller._smooth_attitude(0.0, deg_to_rad(32.0), controller.pitch_response_speed, TEST_DELTA)
+	var roll = controller._smooth_attitude(0.0, deg_to_rad(-42.0), controller.roll_response_speed, TEST_DELTA)
+	var success = pitch > 0.0 and pitch <= max_step + 0.00001
+	success = success and roll < 0.0 and absf(roll) <= max_step + 0.00001
+
+	var rig_30 = CameraFollow.new()
+	var rig_120 = CameraFollow.new()
+	rig_30.camera_node = Camera3D.new()
+	rig_120.camera_node = Camera3D.new()
+	rig_30.camera_node.fov = 75.0
+	rig_120.camera_node.fov = 75.0
+	for i in range(30):
+		rig_30._update_dynamic_fov(54.0, 1.0 / 30.0)
+	for i in range(120):
+		rig_120._update_dynamic_fov(54.0, 1.0 / 120.0)
+	success = success and absf(rig_30.camera_node.fov - rig_120.camera_node.fov) < 0.001
+	success = success and rig_30.camera_node.fov > 89.9
+
+	rig_30.camera_node.free()
+	rig_120.camera_node.free()
+	rig_30.free()
+	rig_120.free()
+	controller.free()
 	return success
 
 func test_scene_structure(

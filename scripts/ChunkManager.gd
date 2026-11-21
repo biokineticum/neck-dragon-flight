@@ -14,6 +14,7 @@ class_name ChunkManager
 extends Node3D
 
 const ProceduralMeshGen = preload("res://scripts/ProceduralMeshGen.gd")
+const WorldDetails = preload("res://scripts/WorldDetails.gd")
 
 @export var chunk_scene: PackedScene = preload("res://scenes/ObstacleChunk.tscn")
 @export var rock_material: Material = preload("res://materials/rock_snow_triplanar.tres")
@@ -37,6 +38,8 @@ var player_ref: Node3D = null
 var landscape_mesh_instance: MeshInstance3D = null
 var forest_multimesh_instance: MultiMeshInstance3D = null
 var clouds_container: Node3D = null
+var world_details: Node3D = null
+var cloud_time: float = 0.0
 
 func _ready() -> void:
 	_build_open_world()
@@ -59,11 +62,17 @@ func get_active_chunk_count() -> int:
 func _build_open_world() -> void:
 	# 1. Clean existing open world nodes if rebuilding
 	if is_instance_valid(landscape_mesh_instance):
+		remove_child(landscape_mesh_instance)
 		landscape_mesh_instance.queue_free()
 	if is_instance_valid(forest_multimesh_instance):
+		remove_child(forest_multimesh_instance)
 		forest_multimesh_instance.queue_free()
 	if is_instance_valid(clouds_container):
+		remove_child(clouds_container)
 		clouds_container.queue_free()
+	if is_instance_valid(world_details):
+		remove_child(world_details)
+		world_details.queue_free()
 		
 	# 2. Generate 3000m x 3000m Static Exploration Landscape
 	landscape_mesh_instance = MeshInstance3D.new()
@@ -93,6 +102,11 @@ func _build_open_world() -> void:
 	# 4. Sky & Fly-Through 3D Puffy Clouds (Zero collision)
 	_build_clouds()
 
+	world_details = WorldDetails.new()
+	world_details.name = "WorldDetails"
+	add_child(world_details)
+	world_details.build(world_size, world_resolution, master_seed)
+
 ## Procedural Forest Generation using GPU instancing
 func _build_forests() -> void:
 	forest_multimesh_instance = MultiMeshInstance3D.new()
@@ -103,12 +117,15 @@ func _build_forests() -> void:
 	mm.use_colors = true
 	mm.instance_count = tree_count
 	mm.mesh = ProceduralMeshGen.generate_fairytale_tree_mesh()
+	var tree_material = ShaderMaterial.new()
+	tree_material.shader = preload("res://materials/forest_wind.gdshader")
+	forest_multimesh_instance.material_override = tree_material
 	
 	var rng = RandomNumberGenerator.new()
 	rng.seed = master_seed + 104729
 	
 	var placed = 0
-	var max_attempts = tree_count * 3
+	var max_attempts = tree_count * 20
 	var attempts = 0
 	
 	while placed < tree_count and attempts < max_attempts:
@@ -117,10 +134,15 @@ func _build_forests() -> void:
 		var dist = rng.randf_range(40.0, 1150.0)
 		var x = cos(angle) * dist
 		var z = sin(angle) * dist
-		var y = ProceduralMeshGen.get_landscape_height(x, z, master_seed)
+		var y = ProceduralMeshGen.sample_landscape_surface(x, z, world_size, world_resolution, master_seed)
 		
 		# Trees thrive in valley floor and gentle hill slopes (Y between 10m and 120m)
-		if y < 10.0 or y > 125.0:
+		if y < 10.0 or y > 125.0 or Vector2(x, z).distance_to(ProceduralMeshGen.LAKE_CENTER) < ProceduralMeshGen.LAKE_RADIUS + 35.0:
+			continue
+		if x > ProceduralMeshGen.RIVER_START and x < ProceduralMeshGen.RIVER_END and absf(z - ProceduralMeshGen.river_center_z(x)) < ProceduralMeshGen.RIVER_HALF_WIDTH + 20.0:
+			continue
+		var grove = sin(x * 0.009 + master_seed) * cos(z * 0.011 - master_seed)
+		if rng.randf() > 0.55 + grove * 0.3:
 			continue
 			
 		var scale_factor = rng.randf_range(0.85, 1.35)
@@ -132,12 +154,14 @@ func _build_forests() -> void:
 		mm.set_instance_transform(placed, t)
 		
 		# Lush natural fairytale foliage colors
-		var green = rng.randf_range(0.65, 0.95)
-		var red = rng.randf_range(0.25, 0.45)
-		var blue = rng.randf_range(0.15, 0.35)
+		var altitude_tint = clampf((y - 30.0) / 95.0, 0.0, 1.0)
+		var green = rng.randf_range(0.48, 0.75) - altitude_tint * 0.12
+		var red = rng.randf_range(0.18, 0.32)
+		var blue = rng.randf_range(0.12, 0.25) + altitude_tint * 0.08
 		mm.set_instance_color(placed, Color(red, green, blue, 1.0))
 		placed += 1
 		
+	mm.visible_instance_count = placed
 	forest_multimesh_instance.multimesh = mm
 	# Passthrough collision (no CollisionShape or physics body)
 	add_child(forest_multimesh_instance)
@@ -149,11 +173,8 @@ func _build_clouds() -> void:
 	add_child(clouds_container)
 	
 	var cloud_mat = StandardMaterial3D.new()
-	cloud_mat.albedo_color = Color(0.98, 0.98, 1.0, 0.90)
+	cloud_mat.albedo_color = Color(0.78, 0.84, 0.90, 1.0)
 	cloud_mat.roughness = 0.90
-	cloud_mat.rim_enabled = true
-	cloud_mat.rim = 0.65
-	cloud_mat.rim_tint = 0.5
 	
 	var cloud_mesh = ProceduralMeshGen.generate_puffy_cloud_mesh()
 	var rng = RandomNumberGenerator.new()
@@ -171,6 +192,7 @@ func _build_clouds() -> void:
 		cloud_node.mesh = cloud_mesh
 		cloud_node.material_override = cloud_mat
 		cloud_node.position = Vector3(cx, cy, cz)
+		cloud_node.set_meta("home", cloud_node.position)
 		
 		var scale_xz = rng.randf_range(0.85, 1.6)
 		var scale_y = rng.randf_range(0.65, 1.2)
@@ -179,6 +201,13 @@ func _build_clouds() -> void:
 		
 		# Zero collision attached: Enables seamless fly-through exploration (R1)
 		clouds_container.add_child(cloud_node)
+
+func _process(delta: float) -> void:
+	cloud_time = fposmod(cloud_time + delta, 3600.0)
+	if is_instance_valid(clouds_container):
+		for cloud in clouds_container.get_children():
+			var home: Vector3 = cloud.get_meta("home")
+			cloud.position = home + Vector3(sin(cloud_time * 0.025 + home.z * 0.002) * 12.0, 0.0, cos(cloud_time * 0.02 + home.x * 0.002) * 8.0)
 
 ## Reset corridor & maintain legacy chunk pool for test suite compatibility
 func reset_corridor() -> void:

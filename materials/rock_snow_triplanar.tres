@@ -10,6 +10,7 @@ uniform vec4 grass_highlight : source_color = vec4(0.42, 0.78, 0.25, 1.0);
 uniform vec4 rock_color : source_color = vec4(0.44, 0.36, 0.28, 1.0);
 uniform vec4 rock_shadow : source_color = vec4(0.28, 0.23, 0.18, 1.0);
 uniform vec4 valley_moss : source_color = vec4(0.12, 0.38, 0.14, 1.0);
+uniform vec4 snow_color : source_color = vec4(0.85, 0.91, 0.96, 1.0);
 
 uniform float slope_threshold : hint_range(-1.0, 1.0) = 0.32;
 uniform float slope_softness : hint_range(0.01, 1.0) = 0.22;
@@ -31,8 +32,21 @@ vec3 get_triplanar_weights(vec3 n) {
 	return w / (w.x + w.y + w.z);
 }
 
+float hash2(vec2 p) {
+	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
+}
+
+float noise2(vec2 p) {
+	vec2 cell = floor(p);
+	vec2 f = fract(p);
+	f = f * f * (3.0 - 2.0 * f);
+	return mix(mix(hash2(cell), hash2(cell + vec2(1.0, 0.0)), f.x),
+		mix(hash2(cell + vec2(0.0, 1.0)), hash2(cell + vec2(1.0, 1.0)), f.x), f.y);
+}
+
 void fragment() {
-	float slope = v_world_normal.y;
+	vec3 world_normal = normalize(v_world_normal);
+	float slope = world_normal.y;
 	float grass_factor = smoothstep(
 		slope_threshold - slope_softness,
 		slope_threshold + slope_softness,
@@ -40,18 +54,14 @@ void fragment() {
 	);
 	
 	// Triplanar noise sampling for natural rock & grass variation
-	vec3 w = get_triplanar_weights(v_world_normal);
+	vec3 w = get_triplanar_weights(world_normal);
 	vec2 uv_x = v_world_pos.zy * uv_scale;
 	vec2 uv_y = v_world_pos.xz * uv_scale;
 	vec2 uv_z = v_world_pos.xy * uv_scale;
 	
 	// Multi-octave procedural stratification
-	float rock_strata = sin(v_world_pos.y * 0.35 + sin(v_world_pos.x * 0.1) * 2.0) * 0.5 + 0.5;
-	float fine_noise = 0.5 + 0.5 * (
-		sin(uv_x.x * 6.28) * sin(uv_x.y * 6.28) * w.x +
-		sin(uv_y.x * 6.28) * sin(uv_y.y * 6.28) * w.y +
-		sin(uv_z.x * 6.28) * sin(uv_z.y * 6.28) * w.z
-	);
+	float rock_strata = noise2(vec2(v_world_pos.y * 0.025, v_world_pos.x * 0.008));
+	float fine_noise = noise2(uv_x) * w.x + noise2(uv_y) * w.y + noise2(uv_z) * w.z;
 	
 	// Rich Cliff rock blending
 	vec3 final_rock = mix(rock_shadow.rgb, rock_color.rgb, rock_strata * 0.6 + fine_noise * 0.4);
@@ -60,10 +70,15 @@ void fragment() {
 	float height_fade = clamp((v_world_pos.y + 10.0) / 80.0, 0.0, 1.0);
 	vec3 base_grass = mix(valley_moss.rgb, grass_color.rgb, height_fade);
 	vec3 final_grass = mix(base_grass, grass_highlight.rgb, fine_noise * 0.45);
+	float alpine = smoothstep(100.0, 220.0, v_world_pos.y);
+	final_grass = mix(final_grass, vec3(0.39, 0.46, 0.28), alpine * 0.65);
 	
-	// Final composite
-	ALBEDO = mix(final_rock, final_grass, grass_factor);
-	ROUGHNESS = mix(rock_roughness, grass_roughness, grass_factor);
+	// Snow gathers on upward-facing surfaces near the high peaks.
+	float snow_line = 235.0 + 18.0 * sin(v_world_pos.x * 0.012) * sin(v_world_pos.z * 0.01);
+	float snow = smoothstep(snow_line, snow_line + 45.0, v_world_pos.y);
+	snow *= smoothstep(0.35, 0.7, slope);
+	ALBEDO = mix(mix(final_rock, final_grass, grass_factor), snow_color.rgb * mix(0.88, 1.0, fine_noise), snow);
+	ROUGHNESS = mix(mix(rock_roughness, grass_roughness, grass_factor), 0.8, snow);
 	METALLIC = 0.02;
 	SPECULAR = mix(0.25, 0.4, grass_factor);
 }

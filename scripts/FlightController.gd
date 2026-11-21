@@ -43,6 +43,7 @@ const MAX_BANK_ANGLE_DEG: float = 42.0
 @export var flight_enabled: bool = true
 @export var pitch_response_speed: float = 16.0
 @export var roll_response_speed: float = 14.0
+@export var max_attitude_rate_deg: float = 180.0
 
 # Runtime flight state
 var body: CharacterBody3D = null
@@ -143,7 +144,7 @@ func _update_attitude(pitch_in: float, yaw_in: float, roll_in: float, delta: flo
 	
 	# Target pitch
 	var target_pitch_rad = pitch_in * deg_to_rad(MAX_PITCH_DEG)
-	current_pitch = lerp_angle(current_pitch, target_pitch_rad, clampf(pitch_response_speed * delta, 0.0, 1.0))
+	current_pitch = _smooth_attitude(current_pitch, target_pitch_rad, pitch_response_speed, delta)
 	current_pitch = clampf(current_pitch, deg_to_rad(-MAX_PITCH_DEG), deg_to_rad(MAX_PITCH_DEG))
 	
 	# Coordinated banking: yaw induces roll, blended with manual roll override
@@ -155,7 +156,7 @@ func _update_attitude(pitch_in: float, yaw_in: float, roll_in: float, delta: flo
 	else:
 		target_roll_rad = roll_in * deg_to_rad(MAX_BANK_ANGLE_DEG)
 
-	current_roll = lerp_angle(current_roll, target_roll_rad, clampf(roll_response_speed * delta, 0.0, 1.0))
+	current_roll = _smooth_attitude(current_roll, target_roll_rad, roll_response_speed, delta)
 	current_roll = clampf(current_roll, deg_to_rad(-MAX_BANK_ANGLE_DEG), deg_to_rad(MAX_BANK_ANGLE_DEG))
 	
 	# Construct orthonormal orientation basis
@@ -167,6 +168,11 @@ func _update_attitude(pitch_in: float, yaw_in: float, roll_in: float, delta: flo
 		body.global_transform.basis = b.orthonormalized()
 	else:
 		fallback_basis = b.orthonormalized()
+
+func _smooth_attitude(current: float, target: float, response: float, delta: float) -> float:
+	var smoothed = lerp_angle(current, target, 1.0 - exp(-maxf(response, 0.0) * delta))
+	var max_step = deg_to_rad(maxf(max_attitude_rate_deg, 0.0)) * delta
+	return current + clampf(angle_difference(current, smoothed), -max_step, max_step)
 
 func _apply_movement(delta: float) -> void:
 	var fwd_vec: Vector3 = Vector3.FORWARD

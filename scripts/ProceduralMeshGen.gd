@@ -544,6 +544,24 @@ static func generate_canyon_walls(length: float = 200.0, width: float = 85.0, he
 ## =============================================================================
 
 ## Procedural Open World Height Evaluation Function
+const LAKE_CENTER: Vector2 = Vector2(380.0, -320.0)
+const LAKE_RADIUS: float = 100.0
+const LAKE_LEVEL: float = 12.0
+const RIVER_START: float = 380.0
+const RIVER_END: float = 1100.0
+const RIVER_FALL: float = 760.0
+const RIVER_HALF_WIDTH: float = 28.0
+
+static func river_center_z(x: float) -> float:
+	var distance = x - RIVER_START
+	return LAKE_CENTER.y - distance * 0.22 + 32.0 * sin(distance * 0.007)
+
+static func river_half_width(x: float) -> float:
+	return RIVER_HALF_WIDTH * (0.82 + 0.10 * sin(x * 0.016) + 0.08 * cos(x * 0.033))
+
+static func river_level(x: float) -> float:
+	return LAKE_LEVEL + maxf(x - RIVER_START, 0.0) * 0.018 + (30.0 if x > RIVER_FALL else 0.0)
+
 static func get_landscape_height(x: float, z: float, seed_val: int = 42) -> float:
 	var r = sqrt(x * x + z * z)
 	
@@ -577,12 +595,50 @@ static func get_landscape_height(x: float, z: float, seed_val: int = 42) -> floa
 	if r > 1100.0:
 		ridge_lift = pow((r - 1100.0) / 350.0, 1.8) * 90.0
 		
-	return maxf(8.0, base_h + hills + ridge_lift)
+	# Radial spurs and passes break up the circular outer ridge.
+	var angle = atan2(z, x)
+	var mountain_weight = smoothstep(450.0, 1050.0, r)
+	var spurs = (sin(angle * 5.0 + s_seed) * 28.0 + sin(angle * 9.0 - s_seed) * 12.0) * mountain_weight
+	var height = maxf(8.0, base_h + hills + ridge_lift + spurs)
+
+	# A broad bowl keeps the lake below its shoreline and away from the spawn.
+	var lake_distance = Vector2(x, z).distance_to(LAKE_CENTER)
+	var lake_blend = 1.0 - smoothstep(LAKE_RADIUS - 12.0, LAKE_RADIUS + 80.0, lake_distance)
+	height = lerpf(height, LAKE_LEVEL - 4.0, lake_blend)
+
+	# The river bed rises upstream and drops at the falls before reaching the lake.
+	var river_range = smoothstep(RIVER_START, RIVER_START + 40.0, x) * (1.0 - smoothstep(RIVER_END - 50.0, RIVER_END, x))
+	var river_distance = absf(z - river_center_z(x))
+	var river_blend = (1.0 - smoothstep(RIVER_HALF_WIDTH + 12.0, RIVER_HALF_WIDTH + 165.0, river_distance)) * river_range
+	var bed = river_level(x) - 7.0
+	var falls_cut = 1.0 - smoothstep(0.0, 55.0, absf(x - RIVER_FALL))
+	bed = lerpf(bed, minf(bed, river_level(RIVER_FALL) - 7.0), falls_cut)
+	return lerpf(height, minf(height, bed), river_blend)
+
+## Match the triangle interpolation used by the visible and collision mesh.
+static func sample_landscape_surface(x: float, z: float, size: float, resolution: int, seed_val: int) -> float:
+	var step = size / float(resolution)
+	var grid_x = clampf((x + size * 0.5) / step, 0.0, float(resolution))
+	var grid_z = clampf((z + size * 0.5) / step, 0.0, float(resolution))
+	var ix = mini(floori(grid_x), resolution - 1)
+	var iz = mini(floori(grid_z), resolution - 1)
+	var tx = grid_x - ix
+	var tz = grid_z - iz
+	var x0 = -size * 0.5 + ix * step
+	var z0 = -size * 0.5 + iz * step
+	var h00 = get_landscape_height(x0, z0, seed_val)
+	var h11 = get_landscape_height(x0 + step, z0 + step, seed_val)
+	if tx >= tz:
+		var h10 = get_landscape_height(x0 + step, z0, seed_val)
+		return h00 * (1.0 - tx) + h10 * (tx - tz) + h11 * tz
+	var h01 = get_landscape_height(x0, z0 + step, seed_val)
+	return h00 * (1.0 - tz) + h01 * (tz - tx) + h11 * tx
 
 ## 7.1 Large 3000m x 3000m Static Exploration Landscape
 static func generate_open_world_landscape(size: float = 3000.0, resolution: int = 150, seed_val: int = 42) -> ArrayMesh:
 	var st = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_smooth_group(0)
 	
 	var half_size = size * 0.5
 	var step = size / float(resolution)
@@ -697,6 +753,7 @@ static func generate_fairytale_tree_mesh() -> ArrayMesh:
 static func generate_puffy_cloud_mesh() -> ArrayMesh:
 	var st = SurfaceTool.new()
 	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	st.set_smooth_group(0)
 	
 	# Cloud puff spheres
 	var puffs: Array[Dictionary] = [
@@ -731,17 +788,18 @@ static func generate_puffy_cloud_mesh() -> ArrayMesh:
 				
 				st.set_uv(Vector2(float(lon) / float(lon_segs), float(lat) / float(lat_segs)))
 				st.add_vertex(v00)
-				st.set_uv(Vector2(float(lon + 1) / float(lon_segs), float(lat) / float(lat_segs)))
-				st.add_vertex(v01)
 				st.set_uv(Vector2(float(lon + 1) / float(lon_segs), float(lat + 1) / float(lat_segs)))
 				st.add_vertex(v11)
+				st.set_uv(Vector2(float(lon + 1) / float(lon_segs), float(lat) / float(lat_segs)))
+				st.add_vertex(v01)
 				
 				st.set_uv(Vector2(float(lon) / float(lon_segs), float(lat) / float(lat_segs)))
 				st.add_vertex(v00)
-				st.set_uv(Vector2(float(lon + 1) / float(lon_segs), float(lat + 1) / float(lat_segs)))
-				st.add_vertex(v11)
 				st.set_uv(Vector2(float(lon) / float(lon_segs), float(lat + 1) / float(lat_segs)))
 				st.add_vertex(v10)
+				st.set_uv(Vector2(float(lon + 1) / float(lon_segs), float(lat + 1) / float(lat_segs)))
+				st.add_vertex(v11)
 				
+	st.index()
 	st.generate_normals()
 	return st.commit()

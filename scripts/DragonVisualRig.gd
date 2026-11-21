@@ -170,10 +170,11 @@ func _process(delta: float) -> void:
 	# 5. Anticipatory Head Yaw into Turns
 	if head_pivot != null:
 		var target_head_yaw: float = -yaw_input * deg_to_rad(max_anticipatory_yaw_deg)
-		current_head_yaw = lerp(current_head_yaw, target_head_yaw, clampf(anticipatory_yaw_smoothing * delta, 0.0, 1.0))
+		var head_blend = 1.0 - exp(-maxf(anticipatory_yaw_smoothing, 0.0) * delta)
+		current_head_yaw = lerp(current_head_yaw, target_head_yaw, head_blend)
 		
 		var target_head_pitch: float = pitch_input * deg_to_rad(6.0)
-		current_head_pitch = lerp(current_head_pitch, target_head_pitch, clampf(anticipatory_yaw_smoothing * delta, 0.0, 1.0))
+		current_head_pitch = lerp(current_head_pitch, target_head_pitch, head_blend)
 		
 		head_pivot.rotation = Vector3(current_head_pitch, current_head_yaw, 0.0)
 

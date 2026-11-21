@@ -114,7 +114,7 @@ func _update_dynamic_fov(speed: float, delta: float) -> void:
 		return
 	var speed_ratio: float = clampf((speed - 30.0) / (54.0 - 30.0), 0.0, 1.0)
 	var target_fov: float = lerpf(BASE_FOV, MAX_FOV, speed_ratio)
-	camera_node.fov = clampf(lerpf(camera_node.fov, target_fov, clampf(fov_lerp_speed * delta, 0.0, 1.0)), 74.0, 92.0)
+	camera_node.fov = clampf(lerpf(camera_node.fov, target_fov, 1.0 - exp(-maxf(fov_lerp_speed, 0.0) * delta)), 74.0, 92.0)
 
 func _update_roll_lag(dragon_roll_deg: float, delta: float) -> void:
 	# Target world roll
