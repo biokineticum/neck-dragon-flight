@@ -3,11 +3,12 @@ extends Node3D
 const Terrain = preload("res://scripts/ProceduralMeshGen.gd")
 const WATER_SHADER = preload("res://materials/lake_water.gdshader")
 const WATERFALL_SHADER = preload("res://materials/waterfall.gdshader")
+const WorldLife = preload("res://scripts/WorldLife.gd")
 
 var wind_player: AudioStreamPlayer
 var birds: MultiMeshInstance3D
 
-func build(world_size: float, resolution: int, seed_value: int) -> void:
+func build(world_size: float, resolution: int, seed_value: int, forest_positions: PackedVector3Array) -> void:
 	_build_boulders(world_size, resolution, seed_value)
 	if world_size >= 1300.0:
 		_build_lake()
@@ -18,6 +19,10 @@ func build(world_size: float, resolution: int, seed_value: int) -> void:
 	_build_birds(world_size, seed_value)
 	_build_wind(seed_value)
 	_build_birdsong(world_size, resolution, seed_value)
+	var life = WorldLife.new()
+	life.name = "WorldLife"
+	add_child(life)
+	life.build(world_size, resolution, seed_value, forest_positions)
 
 func _build_lake() -> void:
 	var st = SurfaceTool.new()
@@ -101,6 +106,8 @@ func _build_boulders(world_size: float, resolution: int, seed_value: int) -> voi
 		var x = rng.randf_range(-half_size, half_size)
 		var z = rng.randf_range(-half_size, half_size)
 		if Vector2(x, z).length() < 180.0 or Vector2(x, z).distance_to(Terrain.LAKE_CENTER) < Terrain.LAKE_RADIUS + 20.0:
+			continue
+		if WorldLife.near_village(Vector2(x, z), world_size):
 			continue
 		if x > Terrain.RIVER_START and x < Terrain.RIVER_END and absf(z - Terrain.river_center_z(x)) < Terrain.RIVER_HALF_WIDTH + 20.0:
 			continue
@@ -217,21 +224,21 @@ func _build_birds(world_size: float, seed_value: int) -> void:
 	st.add_vertex(Vector3(0.0, 0.0, -0.5))
 	st.generate_normals()
 	var bird_mesh = st.commit()
-	var material = StandardMaterial3D.new()
-	material.albedo_color = Color(0.12, 0.15, 0.17)
-	material.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var material = ShaderMaterial.new()
+	material.shader = preload("res://materials/bird_flight.gdshader")
 	bird_mesh.surface_set_material(0, material)
 	var mm = MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_3D
 	mm.mesh = bird_mesh
-	mm.instance_count = 18
+	mm.instance_count = 90
 	var rng = RandomNumberGenerator.new()
 	rng.seed = seed_value + 4817
 	var radius = minf(world_size * 0.25, 550.0)
 	for i in range(mm.instance_count):
-		var angle = TAU * float(i) / float(mm.instance_count) + rng.randf_range(-0.15, 0.15)
-		var distance = radius + rng.randf_range(-30.0, 30.0)
-		var position = Vector3(cos(angle) * distance, rng.randf_range(145.0, 200.0), sin(angle) * distance)
+		var flock = i / 15
+		var angle = TAU * float(flock) / 6.0 + rng.randf_range(-0.05, 0.05)
+		var distance = radius + rng.randf_range(-24.0, 24.0)
+		var position = Vector3(cos(angle) * distance, 145.0 + float(flock % 3) * 25.0 + rng.randf_range(-10.0, 10.0), sin(angle) * distance)
 		mm.set_instance_transform(i, Transform3D(Basis(Vector3.UP, -angle), position))
 	birds = MultiMeshInstance3D.new()
 	birds.name = "DistantBirds"

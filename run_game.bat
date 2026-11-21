@@ -20,12 +20,19 @@ if ERRORLEVEL 1 (
 )
 
 rem Step 2: Verify Python dependencies
-python -c "import cv2, mediapipe, numpy" >nul 2>&1
+python -c "import cv2, mediapipe, numpy; mediapipe.solutions.face_mesh.FaceMesh" >nul 2>&1
 if ERRORLEVEL 1 (
-    echo [WARN] Missing Python dependencies. Installing from requirements.txt...
-    python -m pip install -r "%PROJECT_DIR%tracker\requirements.txt"
+    echo [WARN] Missing or incompatible Python dependencies. Installing from requirements.txt...
+    python -m pip install -r "%PROJECT_DIR%\tracker\requirements.txt"
     if ERRORLEVEL 1 (
         echo [ERROR] Failed to install Python dependencies.
+        pause
+        exit /b 1
+    )
+    python -c "import cv2, mediapipe, numpy; mediapipe.solutions.face_mesh.FaceMesh" >nul 2>&1
+    if ERRORLEVEL 1 (
+        echo [ERROR] The installed Python packages cannot run the webcam tracker.
+        echo Run: python -c "import cv2, mediapipe, numpy; mediapipe.solutions.face_mesh.FaceMesh"
         pause
         exit /b 1
     )
@@ -63,23 +70,14 @@ if not defined GODOT_EXE (
 
 echo [INFO] Python: OK
 echo [INFO] Godot: "%GODOT_EXE%"
-echo [INFO] Starting Python Head Tracker on port 42425...
-
-rem Step 4: Start Python Head Tracker
-start "Dragon Head Tracker" cmd /k python tracker\head_tracker.py
-
-rem Step 5: Start Godot Game Engine
-echo [INFO] Launching Godot project...
-call "%GODOT_EXE%" --path .
+echo [INFO] Starting the webcam tracker and Godot...
+python -u "%PROJECT_DIR%\tracker\launch_game.py" "%GODOT_EXE%"
 
 if ERRORLEVEL 1 (
-    echo [ERROR] Godot exited with an error code.
+    echo [ERROR] The game or webcam tracker could not be started.
     pause
+    exit /b 1
 )
-
-rem Step 6: Cleanup tracker process upon Godot closing
-echo [INFO] Shutting down background head tracker...
-taskkill /FI "WINDOWTITLE eq Dragon Head Tracker*" /T /F >nul 2>&1
 
 echo [INFO] Clean exit.
 endlocal

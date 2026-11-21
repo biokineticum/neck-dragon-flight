@@ -15,6 +15,7 @@ extends SceneTree
 
 const TEST_BATTERY: Array[String] = [
 	"test/test_milestone1_peaceful_openworld.gd",
+	"test/test_heart_collectibles.gd",
 	"test/test_milestone2_headless.gd",
 	"test/test_flight_physics.gd",
 	"test/test_collision.gd",

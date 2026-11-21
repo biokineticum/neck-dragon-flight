@@ -64,18 +64,29 @@ Ensure Windows grants permission to desktop apps to access your camera:
 ## 4. Run Instructions
 
 The valley includes a lake fed by a river and waterfall, clustered forests,
-rocky highlands, a fly-through rock tunnel, an old watchtower and an ancient
-gate. Clouds, trees, water and distant birds move over time. Weather cycles
+rocky highlands, small villages, forest deer and foxes, a fly-through rock
+tunnel, an old watchtower and an ancient gate. Clouds, trees, water, animals
+and flocks of birds move over time. Weather cycles
 between clear and rainy conditions; synthesized wind, water and bird ambience
 adds sound. Wind responds to speed and altitude. Water and landmarks are
 visual, so they do not obstruct peaceful flight.
 
+Explore in different directions and fly through the widely spaced floating pink
+hearts to collect them. The counter shows progress toward five hearts, which
+triggers fireworks; hearts continue to appear for another round. Pressing R
+restarts the flight and resets the heart counter.
+
 ### Option A: One-Click Launcher (Recommended)
 Double-click `run_game.bat` located in the root directory. The launcher script will:
 1. Verify Python availability.
-2. Launch `tracker/head_tracker.py` in a separate process.
+2. Launch `tracker/head_tracker.py` in a managed process and show tracker errors in the launcher window.
 3. Launch Godot 4.7.2 running `scenes/Main.tscn`.
 4. Automatically shut down background processes on exit.
+
+If the camera does not start, check the launcher window for an error, close other
+apps using the webcam, and verify Windows camera permissions. To select a
+different webcam, change `camera_id` in `tracker/tracker_config.json`. The game
+remains playable with keyboard controls if the tracker stops.
 
 ### Option B: Manual Two-Terminal Execution
 1. **Terminal 1 (Head Tracker)**:

@@ -551,6 +551,7 @@ const RIVER_START: float = 380.0
 const RIVER_END: float = 1100.0
 const RIVER_FALL: float = 760.0
 const RIVER_HALF_WIDTH: float = 28.0
+const SETTLEMENT_CENTERS: Array[Vector2] = [Vector2(-320.0, -270.0), Vector2(130.0, -600.0), Vector2(510.0, 220.0)]
 
 static func river_center_z(x: float) -> float:
 	var distance = x - RIVER_START
@@ -563,6 +564,15 @@ static func river_level(x: float) -> float:
 	return LAKE_LEVEL + maxf(x - RIVER_START, 0.0) * 0.018 + (30.0 if x > RIVER_FALL else 0.0)
 
 static func get_landscape_height(x: float, z: float, seed_val: int = 42) -> float:
+	var height = _natural_landscape_height(x, z, seed_val)
+	for center in SETTLEMENT_CENTERS:
+		var distance = Vector2(x, z).distance_to(center)
+		if distance < 135.0:
+			var clearing = 1.0 - smoothstep(85.0, 135.0, distance)
+			return lerpf(height, _natural_landscape_height(center.x, center.y, seed_val), clearing)
+	return height
+
+static func _natural_landscape_height(x: float, z: float, seed_val: int) -> float:
 	var r = sqrt(x * x + z * z)
 	
 	# Radial basin profile:

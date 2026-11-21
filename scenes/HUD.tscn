@@ -95,6 +95,15 @@ layout_mode = 2
 text = "0 m"
 theme_override_font_sizes/font_size = 18
 
+[node name="CollectibleHearts" type="Label" parent="RootControl/InstrumentsContainer"]
+layout_mode = 2
+text = "♥ SERCA: 0 / 5"
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 0.62, 0.73, 1)
+theme_override_colors/font_shadow_color = Color(0.12, 0.03, 0.08, 0.9)
+theme_override_constants/shadow_offset_x = 2
+theme_override_constants/shadow_offset_y = 2
+
 [node name="HealthContainer" type="HBoxContainer" parent="RootControl"]
 visible = false
 layout_mode = 1

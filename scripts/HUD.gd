@@ -28,6 +28,7 @@ const MAX_RETICLE_RADIUS: float = 50.0 # Bounded indicator radius in pixels
 @onready var speed_value: Label = $RootControl/InstrumentsContainer/SpeedRow/SpeedValue
 @onready var speed_bar: ProgressBar = $RootControl/InstrumentsContainer/SpeedBar
 @onready var distance_value: Label = $RootControl/InstrumentsContainer/DistanceRow/DistanceValue
+@onready var collectible_hearts: Label = $RootControl/InstrumentsContainer/CollectibleHearts
 @onready var health_container: HBoxContainer = $RootControl/HealthContainer
 @onready var status_dot: ColorRect = $RootControl/TelemetryContainer/StatusDot
 @onready var status_label: Label = $RootControl/TelemetryContainer/StatusLabel
@@ -295,6 +296,10 @@ func update_distance(distance_meters: float) -> void:
 			distance_value.text = "%.2f km (%d m)" % [d / 1000.0, roundi(d)]
 		else:
 			distance_value.text = "%d m" % roundi(d)
+
+func update_collectible_hearts(count: int, goal: int) -> void:
+	if collectible_hearts != null:
+		collectible_hearts.text = "♥ SERCA: %d / %d" % [count, goal]
 
 func update_health(hearts: int) -> void:
 	current_health = clampi(hearts, 0, max_health)

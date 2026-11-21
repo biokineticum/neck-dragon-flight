@@ -15,6 +15,7 @@ extends Node3D
 
 const ProceduralMeshGen = preload("res://scripts/ProceduralMeshGen.gd")
 const WorldDetails = preload("res://scripts/WorldDetails.gd")
+const WorldLife = preload("res://scripts/WorldLife.gd")
 
 @export var chunk_scene: PackedScene = preload("res://scenes/ObstacleChunk.tscn")
 @export var rock_material: Material = preload("res://materials/rock_snow_triplanar.tres")
@@ -37,6 +38,7 @@ var player_ref: Node3D = null
 # Open World Scene Nodes
 var landscape_mesh_instance: MeshInstance3D = null
 var forest_multimesh_instance: MultiMeshInstance3D = null
+var forest_positions: PackedVector3Array = []
 var clouds_container: Node3D = null
 var world_details: Node3D = null
 var cloud_time: float = 0.0
@@ -105,10 +107,11 @@ func _build_open_world() -> void:
 	world_details = WorldDetails.new()
 	world_details.name = "WorldDetails"
 	add_child(world_details)
-	world_details.build(world_size, world_resolution, master_seed)
+	world_details.build(world_size, world_resolution, master_seed, forest_positions)
 
 ## Procedural Forest Generation using GPU instancing
 func _build_forests() -> void:
+	forest_positions.clear()
 	forest_multimesh_instance = MultiMeshInstance3D.new()
 	forest_multimesh_instance.name = "ForestMultiMesh"
 	
@@ -134,6 +137,8 @@ func _build_forests() -> void:
 		var dist = rng.randf_range(40.0, 1150.0)
 		var x = cos(angle) * dist
 		var z = sin(angle) * dist
+		if WorldLife.near_village(Vector2(x, z), world_size):
+			continue
 		var y = ProceduralMeshGen.sample_landscape_surface(x, z, world_size, world_resolution, master_seed)
 		
 		# Trees thrive in valley floor and gentle hill slopes (Y between 10m and 120m)
@@ -152,6 +157,7 @@ func _build_forests() -> void:
 		t.origin = Vector3(x, y - 0.25, z)
 		
 		mm.set_instance_transform(placed, t)
+		forest_positions.append(t.origin)
 		
 		# Lush natural fairytale foliage colors
 		var altitude_tint = clampf((y - 30.0) / 95.0, 0.0, 1.0)

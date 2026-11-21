@@ -98,8 +98,57 @@ func test_landscape_details() -> bool:
 	success = success and rocks != null and rocks.multimesh.visible_instance_count > 100
 	var forest = cm.forest_multimesh_instance.multimesh
 	success = success and forest.visible_instance_count >= 2000
-	for i in range(forest.visible_instance_count):
-		var point = forest.get_instance_transform(i).origin
+	var world_life = details.get_node_or_null("WorldLife")
+	if world_life == null:
+		printerr("  FAIL: WorldLife missing")
+		cm.queue_free()
+		return false
+	var settlements = world_life.get_node_or_null("Settlements")
+	var wildlife = world_life.get_node_or_null("ForestAnimals")
+	var birds = details.get_node_or_null("DistantBirds") as MultiMeshInstance3D
+	print("  World life: villages=%d animals=%d birds=%d" % [settlements.get_child_count() if settlements != null else -1, wildlife.get_child_count() if wildlife != null else -1, birds.multimesh.instance_count if birds != null else -1])
+	success = success and settlements != null and settlements.get_child_count() == 3
+	success = success and wildlife != null and wildlife.get_child_count() >= 20
+	success = success and birds != null and birds.multimesh.instance_count >= 90
+	if settlements != null:
+		for village in settlements.get_children():
+			success = success and village.get_child_count() >= 5
+			for house in village.get_children():
+				if not house.name.begins_with("House"):
+					continue
+				var location = Vector2(house.position.x, house.position.z)
+				for offset in [Vector2(-8, -8), Vector2(-8, 8), Vector2(8, -8), Vector2(8, 8)]:
+					if house.position.y < terrain.sample_landscape_surface(location.x + offset.x, location.y + offset.y, cm.world_size, cm.world_resolution, cm.master_seed):
+						printerr("  FAIL: House intersects terrain at ", location)
+						success = false
+	if wildlife != null and wildlife.get_child_count() > 0:
+		var deer_count = 0
+		var fox_count = 0
+		for creature in wildlife.get_children():
+			if creature.name.begins_with("Deer"):
+				deer_count += 1
+			elif creature.name.begins_with("Fox"):
+				fox_count += 1
+			var ground = terrain.sample_landscape_surface(creature.position.x, creature.position.z, cm.world_size, cm.world_resolution, cm.master_seed)
+			if absf(creature.position.y - ground) > 0.01:
+				success = false
+		success = success and deer_count >= 10 and fox_count >= 10
+		var animal = wildlife.get_child(0)
+		world_life._process(1.0)
+		var old_animal_position: Vector3 = animal.position
+		world_life._process(0.1)
+		var animal_ground = terrain.sample_landscape_surface(animal.position.x, animal.position.z, cm.world_size, cm.world_resolution, cm.master_seed)
+		print("  Wildlife movement %.3f, ground error %.3f" % [animal.position.distance_to(old_animal_position), absf(animal.position.y - animal_ground)])
+		success = success and animal.position.distance_to(old_animal_position) > 0.01
+		success = success and absf(animal.position.y - animal_ground) < 0.01
+		var movement = animal.position - old_animal_position
+		movement.y = 0.0
+		success = success and movement.normalized().dot(-animal.transform.basis.z.normalized()) > 0.95
+	for point in cm.forest_positions:
+		if world_life.near_village(Vector2(point.x, point.z), cm.world_size):
+			printerr("  FAIL: Tree overlaps a settlement")
+			success = false
+			break
 		if Vector2(point.x, point.z).distance_to(terrain.LAKE_CENTER) < terrain.LAKE_RADIUS + 35.0:
 			success = false
 			break
@@ -155,6 +204,12 @@ func test_landscape_details() -> bool:
 		if child.name == "WorldDetails":
 			detail_count += 1
 	success = success and detail_count == 1
+	var rebuilt_life = cm.get_node("WorldDetails/WorldLife")
+	success = success and rebuilt_life.get_node("ForestAnimals").get_child_count() >= 20
+	for point in cm.forest_positions:
+		if rebuilt_life.near_village(Vector2(point.x, point.z), cm.world_size):
+			success = false
+			break
 	print("  Terrain details: %s (lake samples %d/32, trees %d)" % ["PASS" if success else "FAIL", water_clear_samples, forest.visible_instance_count])
 	cm.queue_free()
 	return success

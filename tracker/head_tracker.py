@@ -576,14 +576,19 @@ class HeadTracker:
         self.filter_roll.reset(t_now, 0.0)
         print(f"[CALIB] Zero-offset established: pitch={self.pitch_offset:+.2f}, yaw={self.yaw_offset:+.2f}, roll={self.roll_offset:+.2f}")
 
-    def run(self) -> None:
+    def run(self) -> bool:
         """Main execution loop capturing video, tracking face, and streaming UDP packets."""
         try:
             import mediapipe as mp
         except ImportError:
             print("[ERROR] Google mediapipe is not installed. Please install requirements.", file=sys.stderr)
-            return
+            self.broadcaster.close()
+            return False
 
+        if not hasattr(mp, "solutions") or not hasattr(mp.solutions, "face_mesh"):
+            print("[ERROR] MediaPipe FaceMesh is unavailable. Install tracker/requirements.txt.", file=sys.stderr)
+            self.broadcaster.close()
+            return False
         mp_face_mesh = mp.solutions.face_mesh
         face_mesh = mp_face_mesh.FaceMesh(
             static_image_mode=False,
@@ -594,13 +599,17 @@ class HeadTracker:
         )
 
         cap = cv2.VideoCapture(self.camera_id, cv2.CAP_DSHOW if sys.platform == "win32" else cv2.CAP_ANY)
-        if not cap.isOpened():
-            print(f"[WARN] Failed to open camera ID {self.camera_id}. Attempting default index 0...")
-            cap = cv2.VideoCapture(0)
+        if not cap.isOpened() and sys.platform == "win32":
+            cap.release()
+            print(f"[WARN] DirectShow could not open camera {self.camera_id}; trying the default backend.")
+            cap = cv2.VideoCapture(self.camera_id, cv2.CAP_ANY)
 
         if not cap.isOpened():
-            print("[ERROR] No video capture device could be opened. Exiting.", file=sys.stderr)
-            return
+            print(f"[ERROR] Could not open camera {self.camera_id}. Check Windows camera privacy settings and whether another app is using it.", file=sys.stderr)
+            cap.release()
+            face_mesh.close()
+            self.broadcaster.close()
+            return False
 
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.frame_width)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.frame_height)
@@ -612,6 +621,8 @@ class HeadTracker:
         fps_timer = time.perf_counter()
         fps_counter = 0
         current_fps = float(self.target_fps)
+        last_frame_time = time.monotonic()
+        success = True
 
         window_name = "Dragon Flight - Head Tracker"
         if self.preview:
@@ -627,10 +638,14 @@ class HeadTracker:
             while self._running:
                 ret, frame = cap.read()
                 if not ret or frame is None:
-                    # Camera frame drop or read stall
+                    if time.monotonic() - last_frame_time > 5.0:
+                        print(f"[ERROR] Camera {self.camera_id} opened but stopped delivering frames.", file=sys.stderr)
+                        success = False
+                        break
                     pacer.sleep()
                     continue
 
+                last_frame_time = time.monotonic()
                 t_now = time.perf_counter()
 
                 # Calculate live FPS
@@ -784,6 +799,7 @@ class HeadTracker:
             if self.preview:
                 cv2.destroyAllWindows()
             print("[INFO] HeadTracker shut down cleanly.")
+        return success
 
 
 # ---------------------------------------------------------------------------
@@ -817,7 +833,7 @@ def main() -> None:
         config["preview"] = False
 
     tracker = HeadTracker(config)
-    tracker.run()
+    sys.exit(0 if tracker.run() else 1)
 
 
 if __name__ == "__main__":
