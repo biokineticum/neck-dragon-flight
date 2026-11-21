@@ -1,0 +1,47 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://scripts/FlightController.gd" id="1_flight"]
+[ext_resource type="Script" path="res://scripts/InputManager.gd" id="2_input"]
+[ext_resource type="Script" path="res://scripts/DragonVisualRig.gd" id="3_rig"]
+[ext_resource type="Script" path="res://scripts/CameraFollow.gd" id="4_camera"]
+[ext_resource type="Material" path="res://materials/dragon_scales.tres" id="5_scales"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_player"]
+radius = 1.2
+height = 3.2
+
+[node name="PlayerDragon" type="CharacterBody3D"]
+collision_layer = 2
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0, -1, 0, 1, 0, 0, 0, -0.4)
+shape = SubResource("CapsuleShape3D_player")
+
+[node name="InputManager" type="Node" parent="."]
+script = ExtResource("2_input")
+
+[node name="FlightController" type="Node" parent="."]
+script = ExtResource("1_flight")
+body_path = NodePath("..")
+input_manager_path = NodePath("../InputManager")
+camera_rig_path = NodePath("../CameraRig")
+visual_rig_path = NodePath("../DragonVisualRig")
+
+[node name="DragonVisualRig" type="Node3D" parent="."]
+script = ExtResource("3_rig")
+flight_controller_path = NodePath("../FlightController")
+dragon_material = ExtResource("5_scales")
+
+[node name="CameraRig" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 1.4, -0.2)
+script = ExtResource("4_camera")
+target_path = NodePath("..")
+flight_controller_path = NodePath("../FlightController")
+visual_rig_path = NodePath("../DragonVisualRig")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+current = true
+fov = 75.0
+near = 0.05
+far = 3500.0

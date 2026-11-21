@@ -1,0 +1,520 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/HUD.gd" id="1_hud"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_settings"]
+bg_color = Color(0.07, 0.1, 0.14, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.3, 0.7, 0.9, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_ready"]
+bg_color = Color(0.06, 0.12, 0.1, 0.96)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.35, 0.85, 0.5, 0.9)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_camerabox"]
+bg_color = Color(0.03, 0.06, 0.08, 0.85)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.5, 0.4, 0.6)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="HUD" type="CanvasLayer"]
+layer = 10
+script = ExtResource("1_hud")
+
+[node name="RootControl" type="Control" parent="."]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="InstrumentsContainer" type="VBoxContainer" parent="RootControl"]
+layout_mode = 1
+anchors_preset = 0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 260.0
+offset_bottom = 140.0
+theme_override_constants/separation = 6
+
+[node name="SpeedRow" type="HBoxContainer" parent="RootControl/InstrumentsContainer"]
+layout_mode = 2
+
+[node name="SpeedLabel" type="Label" parent="RootControl/InstrumentsContainer/SpeedRow"]
+layout_mode = 2
+text = "AIRSPEED:"
+theme_override_font_sizes/font_size = 14
+
+[node name="SpeedValue" type="Label" parent="RootControl/InstrumentsContainer/SpeedRow"]
+layout_mode = 2
+text = "30.0 m/s"
+theme_override_font_sizes/font_size = 18
+
+[node name="SpeedBar" type="ProgressBar" parent="RootControl/InstrumentsContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(220, 8)
+min_value = 18.0
+max_value = 54.0
+step = 0.1
+value = 30.0
+show_percentage = false
+
+[node name="DistanceRow" type="HBoxContainer" parent="RootControl/InstrumentsContainer"]
+layout_mode = 2
+
+[node name="DistanceLabel" type="Label" parent="RootControl/InstrumentsContainer/DistanceRow"]
+layout_mode = 2
+text = "DISTANCE:"
+theme_override_font_sizes/font_size = 14
+
+[node name="DistanceValue" type="Label" parent="RootControl/InstrumentsContainer/DistanceRow"]
+layout_mode = 2
+text = "0 m"
+theme_override_font_sizes/font_size = 18
+
+[node name="HealthContainer" type="HBoxContainer" parent="RootControl"]
+visible = false
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -160.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 60.0
+grow_horizontal = 0
+theme_override_constants/separation = 6
+
+[node name="Heart1" type="Label" parent="RootControl/HealthContainer"]
+layout_mode = 2
+text = "♥"
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(1, 0.2, 0.3, 1)
+
+[node name="Heart2" type="Label" parent="RootControl/HealthContainer"]
+layout_mode = 2
+text = "♥"
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(1, 0.2, 0.3, 1)
+
+[node name="Heart3" type="Label" parent="RootControl/HealthContainer"]
+layout_mode = 2
+text = "♥"
+theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(1, 0.2, 0.3, 1)
+
+[node name="SettingsBtn" type="Button" parent="RootControl"]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -160.0
+offset_top = 66.0
+offset_right = -24.0
+offset_bottom = 98.0
+grow_horizontal = 0
+text = "⚙ USTAWIENIA (O)"
+theme_override_font_sizes/font_size = 12
+
+[node name="TelemetryContainer" type="HBoxContainer" parent="RootControl"]
+layout_mode = 1
+anchors_preset = 2
+anchor_top = 1.0
+anchor_bottom = 1.0
+offset_left = 24.0
+offset_top = -56.0
+offset_right = 320.0
+offset_bottom = -24.0
+grow_vertical = 0
+theme_override_constants/separation = 10
+
+[node name="StatusDot" type="ColorRect" parent="RootControl/TelemetryContainer"]
+layout_mode = 2
+custom_minimum_size = Vector2(16, 16)
+color = Color(0.2, 0.6, 1, 1)
+
+[node name="StatusLabel" type="Label" parent="RootControl/TelemetryContainer"]
+layout_mode = 2
+text = "KEYBOARD / MOUSE"
+theme_override_font_sizes/font_size = 14
+
+[node name="ReticleCenter" type="Control" parent="RootControl"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="ReticleDot" type="ColorRect" parent="RootControl/ReticleCenter"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -3.0
+offset_top = -3.0
+offset_right = 3.0
+offset_bottom = 3.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(1, 1, 1, 0.6)
+
+[node name="CalibrationHint" type="Label" parent="RootControl"]
+layout_mode = 1
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -180.0
+offset_top = -36.0
+offset_right = 180.0
+offset_bottom = -16.0
+grow_horizontal = 2
+grow_vertical = 0
+text = "Press [C] to Calibrate Neutral Head Pose"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(1, 1, 1, 0.7)
+
+[node name="CalibrationFlash" type="Label" parent="RootControl"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -200.0
+offset_top = -120.0
+offset_right = 200.0
+offset_bottom = -80.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "NEUTRAL POSE CALIBRATED"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 0.9, 0.2, 1)
+
+[node name="SettingsPanel" type="Panel" parent="RootControl"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.0
+offset_top = -240.0
+offset_right = 270.0
+offset_bottom = 240.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_settings")
+
+[node name="Margin" type="MarginContainer" parent="RootControl/SettingsPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 18
+
+[node name="VBox" type="VBoxContainer" parent="RootControl/SettingsPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+text = "⚙ USTAWIENIA CZUŁOŚCI / SETTINGS"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 18
+theme_override_colors/font_color = Color(1, 0.85, 0.2, 1)
+
+[node name="Sep1" type="HSeparator" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="OverallRow" type="HBoxContainer" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="OverallName" type="Label" parent="RootControl/SettingsPanel/Margin/VBox/OverallRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Czułość ogólna (Overall Sensitivity):"
+theme_override_font_sizes/font_size = 13
+
+[node name="OverallVal" type="Label" parent="RootControl/SettingsPanel/Margin/VBox/OverallRow"]
+custom_minimum_size = Vector2(55, 0)
+layout_mode = 2
+text = "1.00x"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+
+[node name="OverallSlider" type="HSlider" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+min_value = 0.2
+max_value = 3.0
+step = 0.05
+value = 1.0
+
+[node name="YawRow" type="HBoxContainer" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="YawName" type="Label" parent="RootControl/SettingsPanel/Margin/VBox/YawRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Czułość obrotu pozioma (Yaw / Lewo-Prawo):"
+theme_override_font_sizes/font_size = 13
+
+[node name="YawVal" type="Label" parent="RootControl/SettingsPanel/Margin/VBox/YawRow"]
+custom_minimum_size = Vector2(55, 0)
+layout_mode = 2
+text = "1.00x"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+
+[node name="YawSlider" type="HSlider" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+min_value = 0.2
+max_value = 3.0
+step = 0.05
+value = 1.0
+
+[node name="PitchRow" type="HBoxContainer" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="PitchName" type="Label" parent="RootControl/SettingsPanel/Margin/VBox/PitchRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Czułość pochylenia pionowa (Pitch / Góra-Dół):"
+theme_override_font_sizes/font_size = 13
+
+[node name="PitchVal" type="Label" parent="RootControl/SettingsPanel/Margin/VBox/PitchRow"]
+custom_minimum_size = Vector2(55, 0)
+layout_mode = 2
+text = "1.00x"
+horizontal_alignment = 2
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.4, 0.9, 1, 1)
+
+[node name="PitchSlider" type="HSlider" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+min_value = 0.2
+max_value = 3.0
+step = 0.05
+value = 1.0
+
+[node name="CheckRow" type="HBoxContainer" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="InvertPitchCheck" type="CheckBox" parent="RootControl/SettingsPanel/Margin/VBox/CheckRow"]
+layout_mode = 2
+text = "Odwróć oś Y (Góra/Dół)"
+theme_override_font_sizes/font_size = 12
+
+[node name="InvertYawCheck" type="CheckBox" parent="RootControl/SettingsPanel/Margin/VBox/CheckRow"]
+layout_mode = 2
+text = "Odwróć oś X (Lewo/Prawo)"
+theme_override_font_sizes/font_size = 12
+
+[node name="Sep2" type="HSeparator" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="ButtonsRow" type="HBoxContainer" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="CalibrateBtn" type="Button" parent="RootControl/SettingsPanel/Margin/VBox/ButtonsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 32)
+text = "🎯 Kalibruj (C)"
+theme_override_font_sizes/font_size = 12
+
+[node name="ResetDefaultsBtn" type="Button" parent="RootControl/SettingsPanel/Margin/VBox/ButtonsRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 32)
+text = "↺ Przywróć 1.0x"
+theme_override_font_sizes/font_size = 12
+
+[node name="CloseSettingsBtn" type="Button" parent="RootControl/SettingsPanel/Margin/VBox"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 38)
+text = "✔ ZAMKNIJ I WRÓĆ DO GRY (ESC / O)"
+theme_override_font_sizes/font_size = 13
+
+[node name="ReadyPanel" type="Panel" parent="RootControl"]
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -330.0
+offset_top = -220.0
+offset_right = 330.0
+offset_bottom = 220.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_ready")
+
+[node name="Margin" type="MarginContainer" parent="RootControl/ReadyPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 20
+
+[node name="VBox" type="VBoxContainer" parent="RootControl/ReadyPanel/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="ReadyTitle" type="Label" parent="RootControl/ReadyPanel/Margin/VBox"]
+layout_mode = 2
+text = "🐲 SMOCZY LOT - PRZYGOTOWANIE DO LOTU"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+theme_override_colors/font_color = Color(1, 0.88, 0.25, 1)
+
+[node name="ReadySubtitle" type="Label" parent="RootControl/ReadyPanel/Margin/VBox"]
+layout_mode = 2
+text = "Kraina Bajecznych Gór • Sterowanie Ruchem Głowy"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(0.65, 0.9, 1, 1)
+
+[node name="Sep1" type="HSeparator" parent="RootControl/ReadyPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="CameraStatusBox" type="PanelContainer" parent="RootControl/ReadyPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_camerabox")
+
+[node name="Margin" type="MarginContainer" parent="RootControl/ReadyPanel/Margin/VBox/CameraStatusBox"]
+layout_mode = 2
+theme_override_constants/margin_left = 14
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 10
+
+[node name="ReadyCameraStatus" type="Label" parent="RootControl/ReadyPanel/Margin/VBox/CameraStatusBox/Margin"]
+layout_mode = 2
+text = "⏳ OCZEKIWANIE NA KAMERĘ... (~5-10 sekund)
+(Smok czeka bezpiecznie. Gdy kamerka się włączy, kropka na środku zacznie reagować na ruch głowy)"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 13
+theme_override_colors/font_color = Color(1, 0.8, 0.2, 1)
+
+[node name="ReadyInstructions" type="Label" parent="RootControl/ReadyPanel/Margin/VBox"]
+layout_mode = 2
+text = "Poruszaj głową, aby przetestować celownik przed startem.
+[C] - Kalibracja pozycji neutralnej (patrz na wprost)   •   [O] - Ustawienia czułości"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 12
+theme_override_colors/font_color = Color(0.85, 0.88, 0.9, 0.9)
+
+[node name="Sep2" type="HSeparator" parent="RootControl/ReadyPanel/Margin/VBox"]
+layout_mode = 2
+
+[node name="ReadyActions" type="HBoxContainer" parent="RootControl/ReadyPanel/Margin/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="StartFlightBtn" type="Button" parent="RootControl/ReadyPanel/Margin/VBox/ReadyActions"]
+layout_mode = 2
+size_flags_horizontal = 3
+custom_minimum_size = Vector2(0, 44)
+text = "🚀 ROZPOCZNIJ LOT (SPACJA)"
+theme_override_font_sizes/font_size = 16
+
+[node name="ReadySettingsBtn" type="Button" parent="RootControl/ReadyPanel/Margin/VBox/ReadyActions"]
+custom_minimum_size = Vector2(130, 44)
+layout_mode = 2
+text = "⚙ Ustawienia (O)"
+theme_override_font_sizes/font_size = 13
+
+[node name="GameOverPanel" type="Panel" parent="RootControl"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="RootControl/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -120.0
+offset_right = 250.0
+offset_bottom = 120.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="Title" type="Label" parent="RootControl/GameOverPanel/VBox"]
+layout_mode = 2
+text = "DRAGON DOWN"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(1, 0.2, 0.2, 1)
+
+[node name="DistanceSummary" type="Label" parent="RootControl/GameOverPanel/VBox"]
+layout_mode = 2
+text = "Distance Traveled: 0 m"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 20
+
+[node name="RestartPrompt" type="Label" parent="RootControl/GameOverPanel/VBox"]
+layout_mode = 2
+text = "Naciśnij [SPACJA] lub [R], aby spróbować ponownie"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 16
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
